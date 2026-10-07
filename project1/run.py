@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 
 # Grid spacing
-dx = 0.5e-3  # 0.5 mm
-dy = 0.5e-3  # 0.5 mm
+dx = 0.25e-3  # 0.25 mm
+dy = 0.25e-3  # 0.25 mm
 
 # Physical and electrical parameters
 E0 = 100.0  # V/m
@@ -20,8 +20,8 @@ Rf = 1e6  # ohm
 v = 1e-3  # m/s
 
 # Domain size
-domain_width = 50e-3  # 50 mm
-domain_height = 50e-3  # 50 mm
+domain_width = 80e-3  # 80 mm
+domain_height = 80e-3  # 80 mm
 
 # Sensing plates
 plate_length = 15e-3
@@ -107,3 +107,25 @@ geometry.plot_geometry()
 geometry.plot_potential(filename="potential_with_geo.png")
 phi = geometry.solve()
 geometry.plot_potential(phi, filename="potential_solved.png")
+
+# Electric field from the solved potential, zoomed on the plates
+Ex, Ey = geometry.electric_field(phi)
+geometry.plot_field(phi, xlim=(0, 50), ylim=(0, 25), filename="field.png")
+
+# Check: how many nodes does each conductor own?
+for name, mask in geometry.masks.items():
+    print(name, mask.sum(), "nodes")
+
+# Charge on each conductor (per unit depth, times the plate depth w_out)
+eps0 = 8.8541878128e-12
+Q_ideal = eps0 * E0 * w_out * plate_length
+for name in geometry.masks:
+    Q = geometry.charge(phi, name) * w_out
+    print(f"{name}: Q = {Q:.3e} C   ({Q / Q_ideal:.2f} x ideal)")
+
+# Neutrality check: all charges together must add up to zero
+Q_base = geometry.boundary_charge(phi, 0) * w_out
+Q_top = geometry.boundary_charge(phi, -1) * w_out
+Q_all = sum(geometry.charge(phi, name) for name in geometry.masks) * w_out
+print(f"Base: {Q_base:.3e} C   Top: {Q_top:.3e} C")
+print(f"Sum of everything: {Q_all + Q_base + Q_top:.3e} C")

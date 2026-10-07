@@ -23,6 +23,9 @@ class Geometry:
         # Kept only so plot_geometry can draw the objects.
         self.rectangles = []
 
+        # One True/False array per conductor, same shape as potential.
+        self.masks = {}
+
     # ---- Boundary conditions ----
     def min_y_bc(self, voltage):
         """Potential on the bottom boundary."""
@@ -47,6 +50,7 @@ class Geometry:
         inside = ((self.X >= x_left - tol) & (self.X <= x_right + tol)
                   & (self.Y >= y_bottom - tol) & (self.Y <= y_top + tol))
         self.potential[inside] = voltage
+        self.masks[name] = inside              # remember which nodes are this conductor
 
         self.rectangles.append({
             "name": name,
@@ -157,6 +161,47 @@ class Geometry:
         phi = self.potential.copy()        # fixed nodes already have their voltage
         phi[self.unknown] = V              # put the unknowns back on the map
         return phi        
+    def boundary_charge(self, phi, row):
+        """Charge per unit depth (C/m) on the base (row=0) or top (row=-1) boundary.
+
+        Same link sum as charge(), but the end nodes (on the side walls)
+        only own half a cell, so they count half.
+        """
+        eps0 = 8.8541878128e-12
+        inside = 1 if row == 0 else -2          # the row of nodes just inside the domain
+        weights = np.ones(phi.shape[1])
+        weights[0] = weights[-1] = 0.5
+        return eps0 * np.sum(weights * (phi[row, :] - phi[inside, :]))
+
+    # ---- Electric field ----
+    def electric_field(self, phi):
+        """E = -grad(V). Returns Ex, Ey in V/m (NaN inside the conductors)."""
+        dV_dy, dV_dx = np.gradient(phi, self.dy, self.dx)
+        Ex, Ey = -dV_dx, -dV_dy
+
+        conductor = self.fixed.copy()
+        conductor[0, :] = False        # base and top rows are boundaries,
+        conductor[-1, :] = False       # not conductors
+        Ex[conductor] = np.nan
+        Ey[conductor] = np.nan
+        return Ex, Ey
+
+    # ---- Charge ----
+    def charge(self, phi, name):
+        """Charge per unit depth (C/m) on the conductor `name`.
+
+        Square grid (dx = dy). Q/W = eps0 * sum of (V_conductor - V_neighbour)
+        over every link from a conductor node to a node outside it.
+        """
+        eps0 = 8.8541878128e-12
+        mask = self.masks[name]
+        total = 0.0
+        for j, i in zip(*np.nonzero(mask)):
+            for jn, i_n in ((j, i - 1), (j, i + 1), (j - 1, i), (j + 1, i)):
+                if not mask[jn, i_n]:                  # neighbour is outside the conductor
+                    total += phi[j, i] - phi[jn, i_n]
+        return eps0 * total
+
     # ---- Plots ----
     def plot_geometry(self):
         """Draw the domain, the conductors and the boundary conditions."""
@@ -212,6 +257,47 @@ class Geometry:
         ax.set_xlabel("x (mm)")
         ax.set_ylabel("y (mm)")
         ax.set_title("Potential (V)")
+
+        if filename:
+            fig.savefig(filename, dpi=150, bbox_inches="tight")
+        plt.show()
+
+    def plot_field(self, phi, xlim=None, ylim=None, filename=None):
+        """Plot |E| as colour, with field lines. xlim, ylim in millimetres."""
+        Ex, Ey = self.electric_field(phi)
+        magnitude = np.hypot(Ex, Ey)
+        E0 = self.potential[-1, 0] / self.Y[-1, 0]   # applied field, V/m
+
+        x = self.X[0, :] * 1000
+        y = self.Y[:, 0] * 1000
+
+        fig, ax = plt.subplots(figsize=(9, 6))
+        mesh = ax.pcolormesh(
+            x, y, np.ma.masked_invalid(magnitude), shading="nearest",
+            cmap="inferno", vmin=0, vmax=4 * E0,
+        )
+        fig.colorbar(mesh, ax=ax, label="|E| (V/m)")
+
+        ax.streamplot(
+            x, y, np.ma.masked_invalid(Ex), np.ma.masked_invalid(Ey),
+            color="white", density=2, linewidth=0.5, arrowsize=0.7,
+        )
+
+        for r in self.rectangles:
+            ax.add_patch(Rectangle(
+                (r["x_left"] * 1000, r["y_bottom"] * 1000),
+                r["width"] * 1000, r["height"] * 1000,
+                facecolor="lightgreen", edgecolor="black",
+            ))
+
+        if xlim:
+            ax.set_xlim(*xlim)
+        if ylim:
+            ax.set_ylim(*ylim)
+        ax.set_aspect("equal")
+        ax.set_xlabel("x (mm)")
+        ax.set_ylabel("y (mm)")
+        ax.set_title("Electric field")
 
         if filename:
             fig.savefig(filename, dpi=150, bbox_inches="tight")
