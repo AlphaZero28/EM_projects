@@ -1,6 +1,11 @@
 import numpy as np
-
-
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from scipy.sparse import coo_matrix
+from scipy.sparse.linalg import spsolve
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = ["Times New Roman", "Times", "DejaVu Serif"]
+plt.rcParams["font.size"] = 18
 class Geometry:
     def __init__(self, X, Y):
         self.X = X
@@ -60,11 +65,102 @@ class Geometry:
     def fixed(self):
         return ~np.isnan(self.potential)
 
+    # ---- Equation numbering ----
+    def number_unknowns(self):
+        """Give every unknown node an equation number 0, 1, 2, ...
+
+        """
+        self.index = np.full(self.potential.shape, -1, dtype=int)
+        self.index[self.unknown] = np.arange(self.unknown.sum())
+
+    # ---- Neighbours ----
+    def neighbors(self, j, i):
+        """Equation numbers of the four neighbours of node [j, i].
+
+        Returns (left, right, below, above). For each neighbour:
+          >= 0  -> unknown node, this is its equation number
+          -1    -> fixed node (its voltage is in self.potential)
+          None  -> no such node (off the grid, e.g. beyond a side wall)
+        """
+        Ny, Nx = self.index.shape
+        result = []
+        for dj, di in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+            jn, i_n = j + dj, i + di
+            if 0 <= jn < Ny and 0 <= i_n < Nx:
+                result.append(int(self.index[jn, i_n]))
+            else:
+                result.append(None)
+        return tuple(result)
+
+    # ---- Equation row ----
+    def equation_row(self, j, i):
+        """Row of the equation for unknown node [j, i].
+
+        Returns (columns, coefficients, rhs):
+          columns      -> equation numbers of the unknowns in this equation
+          coefficients -> the number that multiplies each of those unknowns
+          rhs          -> right-hand side, from fixed neighbours and wall slopes
+        """
+        k = int(self.index[j, i])
+        if k < 0:
+            raise ValueError(f"Node [{j}, {i}] is fixed, it has no equation.")
+
+        left, right, below, above = self.neighbors(j, i)
+        positions = [(j, i - 1), (j, i + 1), (j - 1, i), (j + 1, i)]
+        rhs = 0.0
+
+        # Side walls: the missing neighbour is a ghost node that mirrors the
+        # neighbour on the other side, corrected by the wall slope.
+        if left is None:       # V_left = V_right - 2*dx*slope
+            left, positions[0] = right, positions[1]
+            rhs += -0.5 * self.dx * self.min_x_gradient
+        if right is None:      # V_right = V_left + 2*dx*slope
+            right, positions[1] = left, positions[0]
+            rhs += 0.5 * self.dx * self.max_x_gradient
+
+        terms = {k: 1.0}                       # the node itself
+        for neighbor, (jn, i_n) in zip((left, right, below, above), positions):
+            if neighbor is None:
+                raise ValueError(f"Node [{j}, {i}] is on the top or bottom edge.")
+            if neighbor >= 0:                  # unknown neighbour
+                terms[neighbor] = terms.get(neighbor, 0.0) - 0.25
+            else:                              # fixed neighbour
+                rhs += 0.25 * float(self.potential[jn, i_n])
+
+        return list(terms), list(terms.values()), float(rhs)
+
+
+    # ---- Build the system A · V = b ----
+    def build_system(self):
+        """Build the sparse matrix A and the vector b for A · V = b."""
+        n = int(self.unknown.sum())            # number of equations = unknowns
+        rows, cols, vals = [], [], []
+        b = np.zeros(n)
+
+        for j, i in zip(*np.nonzero(self.unknown)):
+            k = int(self.index[j, i])          # this node's row number
+            columns, coefficients, rhs = self.equation_row(j, i)
+            for column, coefficient in zip(columns, coefficients):
+                rows.append(k)
+                cols.append(column)
+                vals.append(coefficient)
+            b[k] = rhs
+
+        A = coo_matrix((vals, (rows, cols)), shape=(n, n)).tocsr()
+        return A, b
+    
+    # ---- Solve ----
+    def solve(self):
+        """Solve A · V = b and return the full potential map."""
+        A, b = self.build_system()
+        V = spsolve(A, b)                  # potential at every unknown node
+        phi = self.potential.copy()        # fixed nodes already have their voltage
+        phi[self.unknown] = V              # put the unknowns back on the map
+        return phi        
     # ---- Plots ----
     def plot_geometry(self):
         """Draw the domain, the conductors and the boundary conditions."""
-        import matplotlib.pyplot as plt
-        from matplotlib.patches import Rectangle
+
 
         x_max = self.X[0, -1] * 1000
         y_max = self.Y[-1, 0] * 1000

@@ -6,10 +6,12 @@
 
 import numpy as np
 from functions import Geometry
+import matplotlib.pyplot as plt
+
 
 # Grid spacing
-dx = 0.25e-3  # 0.25 mm
-dy = 0.25e-3  # 0.25 mm
+dx = 0.5e-3  # 0.5 mm
+dy = 0.5e-3  # 0.5 mm
 
 # Physical and electrical parameters
 E0 = 100.0  # V/m
@@ -19,7 +21,7 @@ v = 1e-3  # m/s
 
 # Domain size
 domain_width = 50e-3  # 50 mm
-domain_height = 60e-3  # 60 mm
+domain_height = 50e-3  # 50 mm
 
 # Sensing plates
 plate_length = 15e-3
@@ -72,7 +74,7 @@ geometry.min_y_bc(0.0)  # base
 geometry.max_y_bc(top_voltage)  # top
 geometry.min_x_bc(0.0)  # left wall: dV/dx = 0
 geometry.max_x_bc(0.0)  # right wall: dV/dx = 0
-geometry.plot_potential()
+geometry.plot_potential(filename="potential_initial.png")
 # Conductors: every node inside is fixed at 0 V
 geometry.add_conductor("Plate 1", plate1_x0, plate1_x1, yp0, yp1)
 geometry.add_conductor("Plate 2", plate2_x0, plate2_x1, yp0, yp1)
@@ -85,8 +87,23 @@ print(f"Shutter positions: {Ns}")
 print(f"Fixed nodes:   {geometry.fixed.sum()}")
 print(f"Unknown nodes: {geometry.unknown.sum()}")
 
+# Number the unknown nodes (one equation per unknown node)
+geometry.number_unknowns()
+print(f"Largest equation number + 1: {geometry.index.max() + 1}")
+print(f"Fixed nodes all -1: {(geometry.index[geometry.fixed] == -1).all()}")
+
+# Neighbours (left, right, below, above) of two nodes, as a check
+print("Node [22, 30] (just above Plate 1):", geometry.neighbors(22, 30))
+print("Node [50, 0]  (left wall):         ", geometry.neighbors(50, 0))
+
+# Equation rows for two nodes, as a check
+print("Equation for node [22, 30] (just above Plate 1):", geometry.equation_row(22, 30))
+print("Equation for node [50, 0]  (left wall):         ", geometry.equation_row(50, 0))
+
 # Plots
 geometry.plot_geometry()
 
 # Potential array: grey = unknown, coloured = fixed. Zoomed on the plates.
-geometry.plot_potential()
+geometry.plot_potential(filename="potential_with_geo.png")
+phi = geometry.solve()
+geometry.plot_potential(phi, filename="potential_solved.png")
