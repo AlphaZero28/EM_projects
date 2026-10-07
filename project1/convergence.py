@@ -24,7 +24,7 @@ def run_case(domain_width, domain_height, h):
     pair_length = 2 * plate_length + plate_gap
     x0 = round(0.5 * (domain_width - pair_length) / h) * h
     ys0 = yp1 + 2e-3
-    ys1 = ys0 + 0.5e-3
+    ys1 = ys0 + 0.5e-3 
 
     x = np.arange(round(domain_width / h) + 1) * h
     y = np.arange(round(domain_height / h) + 1) * h
