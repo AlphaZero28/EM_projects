@@ -19,9 +19,9 @@ s = data["s"] - data["s"][0]   # shutter position, 0 = covering Plate 1 (m)
 Q1 = data["Q1"]
 Q2 = data["Q2"]
 
-# Current into the amplifier from each plate: i = dQ/dt = v * dQ/ds
-i1 = v * np.gradient(Q1, s)
-i2 = v * np.gradient(Q2, s)
+# Current flowing out of each plate into the amplifier: i_in = -dQ/dt = -v * dQ/ds
+i1 = -v * np.gradient(Q1, s)
+i2 = -v * np.gradient(Q2, s)
 
 # Differential connection, then the transimpedance amplifier
 i = i1 - i2
