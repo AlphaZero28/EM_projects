@@ -1,16 +1,11 @@
 """
 * author: Ohidul Islam
+* created on 06-10-2026-14h-17m
 * copyright 2026
 """
 
 import numpy as np
-from functions import Geometry, plot_geometry
-
-
-def snap(value, step):
-    """Round a length to the nearest grid line."""
-    return round(value / step) * step
-
+from functions import Geometry
 
 # Grid spacing
 dx = 0.25e-3  # 0.25 mm
@@ -18,9 +13,13 @@ dy = 0.25e-3  # 0.25 mm
 
 # Physical and electrical parameters
 E0 = 100.0  # V/m
-w_out = 50e-3  # plate depth W 
+w_out = 50e-3  # plate depth W (out of plane)
 Rf = 1e6  # ohm
 v = 1e-3  # m/s
+
+# Domain size
+domain_width = 50e-3  # 50 mm
+domain_height = 60e-3  # 60 mm
 
 # Sensing plates
 plate_length = 15e-3
@@ -32,13 +31,8 @@ yp0 = plate_height
 yp1 = yp0 + plate_thickness
 pair_length = 2 * plate_length + plate_gap
 
-# Domain size 
-side_margin_in_L = 3.5
-height_in_L = 10.0
-
-x_pair_left = snap(side_margin_in_L * plate_length, dx)
-domain_width = snap(2 * x_pair_left + pair_length, dx)
-domain_height = snap(height_in_L * plate_length, dy)
+# Centre the plate pair in x, on a grid line
+x_pair_left = round(0.5 * (domain_width - pair_length) / dx) * dx
 
 plate1_x0 = x_pair_left
 plate1_x1 = plate1_x0 + plate_length
@@ -58,6 +52,9 @@ s_start = plate1_x0
 s_end = plate2_x1 - shutter_length
 Ns = round((s_end - s_start) / dx) + 1
 
+# Shutter position used now: the first one (covers Plate 1)
+s = s_start
+
 # Grid
 number_of_x_points = round(domain_width / dx) + 1
 number_of_y_points = round(domain_height / dy) + 1
@@ -65,35 +62,31 @@ x = np.arange(number_of_x_points) * dx
 y = np.arange(number_of_y_points) * dy
 X, Y = np.meshgrid(x, y)
 
+# Top boundary voltage gives a far-field of E0
 top_voltage = E0 * domain_height
 
+# Build the geometry
+geometry = Geometry(X, Y)
 
-def build_geometry(n):
-    s = s_start + n * dx
+geometry.min_y_bc(0.0)  # base
+geometry.max_y_bc(top_voltage)  # top
+geometry.min_x_bc(0.0)  # left wall: dV/dx = 0
+geometry.max_x_bc(0.0)  # right wall: dV/dx = 0
+geometry.plot_potential()
+# Conductors: every node inside is fixed at 0 V
+geometry.add_conductor("Plate 1", plate1_x0, plate1_x1, yp0, yp1)
+geometry.add_conductor("Plate 2", plate2_x0, plate2_x1, yp0, yp1)
+geometry.add_conductor("Shutter", s, s + shutter_length, ys0, ys1)
 
-    geometry = Geometry(X, Y)
-    geometry.add_rectangle("Plate 1", plate1_x0, plate1_x1, yp0, yp1)
-    geometry.add_rectangle("Plate 2", plate2_x0, plate2_x1, yp0, yp1)
-    geometry.add_rectangle("Shutter", s, s + shutter_length, ys0, ys1)
-    geometry.assign_materials(X, Y)
+# Summary
+print(f"Domain: {domain_width * 1e3:.1f} mm x {domain_height * 1e3:.1f} mm")
+print(f"Grid:   {number_of_x_points} x {number_of_y_points} nodes")
+print(f"Shutter positions: {Ns}")
+print(f"Fixed nodes:   {geometry.fixed.sum()}")
+print(f"Unknown nodes: {geometry.unknown.sum()}")
 
-    geometry.min_y_bc(0.0)  # base
-    geometry.max_y_bc(top_voltage)  # top
-    geometry.min_x_bc(0.0)  # left wall: dV/dx = 0
-    geometry.max_x_bc(0.0)  # right wall: dV/dx = 0
+# Plots
+geometry.plot_geometry()
 
-    geometry.set_potential("Plate 1", 0.0)
-    geometry.set_potential("Plate 2", 0.0)
-    geometry.set_potential("Shutter", 0.0)
-
-    geometry.finalize()
-    return geometry
-
-
-if __name__ == "__main__":
-    print(f"Domain: {domain_width * 1e3:.1f} mm x {domain_height * 1e3:.1f} mm")
-    print(f"Grid:   {number_of_x_points} x {number_of_y_points} nodes")
-    print(f"Shutter positions: {Ns}")
-
-    first = build_geometry(0)
-    plot_geometry(first, x, y, top_voltage=top_voltage)
+# Potential array: grey = unknown, coloured = fixed. Zoomed on the plates.
+geometry.plot_potential()
