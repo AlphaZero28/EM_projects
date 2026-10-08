@@ -14,7 +14,7 @@ Rf = 1e6  # ohm
 v = 1e-3  # m/s
 
 # Load the charge on each plate 
-data = np.load("sweep_data.npz")
+data = np.load("data/sweep_data.npz")
 s = data["s"] - data["s"][0]   
 Q1 = data["Q1"]
 Q2 = data["Q2"]
@@ -39,4 +39,4 @@ fig.tight_layout()
 fig.savefig("output.png", dpi=150, bbox_inches="tight")
 plt.show()
 
-np.savez("output_data.npz", s=s, V_out=V_out)
+# np.savez("data/output_data.npz", s=s, V_out=V_out)
