@@ -168,7 +168,7 @@ class Geometry:
         only own half a cell, so they count half.
         """
         eps0 = 8.8541878128e-12
-        inside = 1 if row == 0 else -2          # the row of nodes just inside the domain
+        inside = 1 if row == 0 else -2          
         weights = np.ones(phi.shape[1])
         weights[0] = weights[-1] = 0.5
         return eps0 * np.sum(weights * (phi[row, :] - phi[inside, :]))
@@ -263,10 +263,10 @@ class Geometry:
         plt.show()
 
     def plot_field(self, phi, xlim=None, ylim=None, filename=None):
-        """Plot |E| as colour, with field lines. xlim, ylim in millimetres."""
+        """Plot |E|. xlim, ylim in millimetres."""
         Ex, Ey = self.electric_field(phi)
         magnitude = np.hypot(Ex, Ey)
-        E0 = self.potential[-1, 0] / self.Y[-1, 0]   # applied field, V/m
+        E0 = self.potential[-1, 0] / self.Y[-1, 0]   
 
         x = self.X[0, :] * 1000
         y = self.Y[:, 0] * 1000
@@ -278,10 +278,6 @@ class Geometry:
         )
         fig.colorbar(mesh, ax=ax, label="|E| (V/m)")
 
-        ax.streamplot(
-            x, y, np.ma.masked_invalid(Ex), np.ma.masked_invalid(Ey),
-            color="white", density=2, linewidth=0.5, arrowsize=0.7,
-        )
 
         for r in self.rectangles:
             ax.add_patch(Rectangle(

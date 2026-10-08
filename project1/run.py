@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 
 # Grid spacing
-dx = 0.25e-3  # 0.25 mm
-dy = 0.25e-3  # 0.25 mm
+dx = 0.25e-3  
+dy = 0.25e-3  
 
 # Physical and electrical parameters
 E0 = 100.0  # V/m
@@ -20,8 +20,8 @@ Rf = 1e6  # ohm
 v = 1e-3  # m/s
 
 # Domain size
-domain_width = 80e-3  # 80 mm
-domain_height = 80e-3  # 80 mm
+domain_width = 80e-3  
+domain_height = 80e-3 
 
 # Sensing plates
 plate_length = 15e-3
@@ -33,7 +33,6 @@ yp0 = plate_height
 yp1 = yp0 + plate_thickness
 pair_length = 2 * plate_length + plate_gap
 
-# Centre the plate pair in x, on a grid line
 x_pair_left = round(0.5 * (domain_width - pair_length) / dx) * dx
 
 plate1_x0 = x_pair_left
@@ -41,7 +40,7 @@ plate1_x1 = plate1_x0 + plate_length
 plate2_x0 = plate1_x1 + plate_gap
 plate2_x1 = plate2_x0 + plate_length
 
-# Shutter (same length as a plate)
+# Shutter 
 shutter_length = plate_length
 shutter_thickness = 0.5e-3
 shutter_plate_gap = 2e-3
@@ -49,12 +48,12 @@ shutter_plate_gap = 2e-3
 ys0 = yp1 + shutter_plate_gap
 ys1 = ys0 + shutter_thickness
 
-# Shutter positions, one grid cell per step
+# Shutter positions
 s_start = plate1_x0
 s_end = plate2_x1 - shutter_length
 Ns = round((s_end - s_start) / dx) + 1
 
-# Shutter position used now: the first one (covers Plate 1)
+# Shutter position 
 s = s_start
 
 # Grid
@@ -64,7 +63,7 @@ x = np.arange(number_of_x_points) * dx
 y = np.arange(number_of_y_points) * dy
 X, Y = np.meshgrid(x, y)
 
-# Top boundary voltage gives a far-field of E0
+# Top boundary 
 top_voltage = E0 * domain_height
 
 # Build the geometry
@@ -103,25 +102,24 @@ print("Equation for node [50, 0]  (left wall):         ", geometry.equation_row(
 # Plots
 geometry.plot_geometry()
 
-# Potential array: grey = unknown, coloured = fixed. Zoomed on the plates.
+
 geometry.plot_potential(filename="potential_with_geo.png")
 phi = geometry.solve()
 geometry.plot_potential(phi, filename="potential_solved.png")
 
-# Electric field from the solved potential, zoomed on the plates
-Ex, Ey = geometry.electric_field(phi)
-geometry.plot_field(phi, xlim=(0, 50), ylim=(0, 25), filename="field.png")
 
-# Check: how many nodes does each conductor own?
+Ex, Ey = geometry.electric_field(phi)
+geometry.plot_field(phi, xlim=(0, 80), ylim=(0, 80), filename="field.png")
+
+
 for name, mask in geometry.masks.items():
     print(name, mask.sum(), "nodes")
 
-# Charge on each conductor (per unit depth, times the plate depth w_out)
+# Charge on each conductor 
 eps0 = 8.8541878128e-12
-Q_ideal = eps0 * E0 * w_out * plate_length
 for name in geometry.masks:
     Q = geometry.charge(phi, name) * w_out
-    print(f"{name}: Q = {Q:.3e} C   ({Q / Q_ideal:.2f} x ideal)")
+    print(f"{name}: Q = {Q:.3e} C")
 
 # Neutrality check: all charges together must add up to zero
 Q_base = geometry.boundary_charge(phi, 0) * w_out
