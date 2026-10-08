@@ -1,6 +1,5 @@
 """
 * author: Ohidul Islam
-* created on 06-10-2026-14h-17m
 * copyright 2026
 """
 
@@ -15,7 +14,7 @@ dy = 0.25e-3
 
 # Physical and electrical parameters
 E0 = 100.0  # V/m
-w_out = 50e-3  # plate depth W (out of plane)
+w_out = 50e-3  
 Rf = 1e6  # ohm
 v = 1e-3  # m/s
 
@@ -26,7 +25,7 @@ domain_height = 80e-3
 # Sensing plates
 plate_length = 15e-3
 plate_thickness = 0.5e-3
-plate_height = 10e-3  # bottom of plates above y = 0
+plate_height = 10e-3  
 plate_gap = 2e-3
 
 yp0 = plate_height
@@ -54,7 +53,8 @@ s_end = plate2_x1 - shutter_length
 Ns = round((s_end - s_start) / dx) + 1
 
 # Shutter position 
-s = s_start
+s = (s_end + s_start)/2
+# s= s_
 
 # Grid
 number_of_x_points = round(domain_width / dx) + 1
@@ -73,8 +73,7 @@ geometry.min_y_bc(0.0)  # base
 geometry.max_y_bc(top_voltage)  # top
 geometry.min_x_bc(0.0)  # left wall: dV/dx = 0
 geometry.max_x_bc(0.0)  # right wall: dV/dx = 0
-geometry.plot_potential(filename="potential_initial.png")
-# Conductors: every node inside is fixed at 0 V
+# geometry.plot_potential(filename="potential_initial.png")
 geometry.add_conductor("Plate 1", plate1_x0, plate1_x1, yp0, yp1)
 geometry.add_conductor("Plate 2", plate2_x0, plate2_x1, yp0, yp1)
 geometry.add_conductor("Shutter", s, s + shutter_length, ys0, ys1)
@@ -86,7 +85,7 @@ print(f"Shutter positions: {Ns}")
 print(f"Fixed nodes:   {geometry.fixed.sum()}")
 print(f"Unknown nodes: {geometry.unknown.sum()}")
 
-# Number the unknown nodes (one equation per unknown node)
+# Number the unknown nodes 
 geometry.number_unknowns()
 print(f"Largest equation number + 1: {geometry.index.max() + 1}")
 print(f"Fixed nodes all -1: {(geometry.index[geometry.fixed] == -1).all()}")
@@ -103,13 +102,13 @@ print("Equation for node [50, 0]  (left wall):         ", geometry.equation_row(
 geometry.plot_geometry()
 
 
-geometry.plot_potential(filename="potential_with_geo.png")
+geometry.plot_potential(filename="potential_with_geo_mid.png")
 phi = geometry.solve()
-geometry.plot_potential(phi, filename="potential_solved.png")
+geometry.plot_potential(phi, filename="potential_solved_mid.png")
 
 
 Ex, Ey = geometry.electric_field(phi)
-geometry.plot_field(phi, xlim=(0, 80), ylim=(0, 80), filename="field.png")
+geometry.plot_field(phi, xlim=(0, 80), ylim=(0, 80), filename="field_mid.png")
 
 
 for name, mask in geometry.masks.items():
@@ -121,9 +120,3 @@ for name in geometry.masks:
     Q = geometry.charge(phi, name) * w_out
     print(f"{name}: Q = {Q:.3e} C")
 
-# Neutrality check: all charges together must add up to zero
-Q_base = geometry.boundary_charge(phi, 0) * w_out
-Q_top = geometry.boundary_charge(phi, -1) * w_out
-Q_all = sum(geometry.charge(phi, name) for name in geometry.masks) * w_out
-print(f"Base: {Q_base:.3e} C   Top: {Q_top:.3e} C")
-print(f"Sum of everything: {Q_all + Q_base + Q_top:.3e} C")

@@ -1,7 +1,3 @@
-"""
-Convergence check: how do Q1 and Q2 (shutter over Plate 1) change with
-domain size and grid spacing?  Stop trusting numbers that still move.
-"""
 
 import time
 import numpy as np

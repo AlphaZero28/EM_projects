@@ -13,17 +13,16 @@ class Geometry:
         self.dx = X[0, 1] - X[0, 0]
         self.dy = Y[1, 0] - Y[0, 0]
 
-        # The one array that matters: NaN = unknown, number = fixed voltage.
+        # potential map: NaN = unknown, number = fixed voltage.
         self.potential = np.full(X.shape, np.nan)
 
-        # d(potential)/dx on the left and right walls.
+        #  left and right walls.
         self.min_x_gradient = 0.0
         self.max_x_gradient = 0.0
 
-        # Kept only so plot_geometry can draw the objects.
         self.rectangles = []
 
-        # One True/False array per conductor, same shape as potential.
+        # One True/False array per conductor
         self.masks = {}
 
     # ---- Boundary conditions ----
@@ -50,7 +49,7 @@ class Geometry:
         inside = ((self.X >= x_left - tol) & (self.X <= x_right + tol)
                   & (self.Y >= y_bottom - tol) & (self.Y <= y_top + tol))
         self.potential[inside] = voltage
-        self.masks[name] = inside              # remember which nodes are this conductor
+        self.masks[name] = inside              # conductor
 
         self.rectangles.append({
             "name": name,
@@ -72,7 +71,6 @@ class Geometry:
     # ---- Equation numbering ----
     def number_unknowns(self):
         """Give every unknown node an equation number 0, 1, 2, ...
-
         """
         self.index = np.full(self.potential.shape, -1, dtype=int)
         self.index[self.unknown] = np.arange(self.unknown.sum())
@@ -114,11 +112,10 @@ class Geometry:
         rhs = 0.0
 
         # Side walls: the missing neighbour is a ghost node that mirrors the
-        # neighbour on the other side, corrected by the wall slope.
-        if left is None:       # V_left = V_right - 2*dx*slope
+        if left is None:       
             left, positions[0] = right, positions[1]
             rhs += -0.5 * self.dx * self.min_x_gradient
-        if right is None:      # V_right = V_left + 2*dx*slope
+        if right is None:      
             right, positions[1] = left, positions[0]
             rhs += 0.5 * self.dx * self.max_x_gradient
 
@@ -136,7 +133,6 @@ class Geometry:
 
     # ---- Build the system A · V = b ----
     def build_system(self):
-        """Build the sparse matrix A and the vector b for A · V = b."""
         n = int(self.unknown.sum())            # number of equations = unknowns
         rows, cols, vals = [], [], []
         b = np.zeros(n)
@@ -155,23 +151,11 @@ class Geometry:
     
     # ---- Solve ----
     def solve(self):
-        """Solve A · V = b and return the full potential map."""
         A, b = self.build_system()
-        V = spsolve(A, b)                  # potential at every unknown node
-        phi = self.potential.copy()        # fixed nodes already have their voltage
-        phi[self.unknown] = V              # put the unknowns back on the map
+        V = spsolve(A, b)                  
+        phi = self.potential.copy()        
+        phi[self.unknown] = V              
         return phi        
-    def boundary_charge(self, phi, row):
-        """Charge per unit depth (C/m) on the base (row=0) or top (row=-1) boundary.
-
-        Same link sum as charge(), but the end nodes (on the side walls)
-        only own half a cell, so they count half.
-        """
-        eps0 = 8.8541878128e-12
-        inside = 1 if row == 0 else -2          
-        weights = np.ones(phi.shape[1])
-        weights[0] = weights[-1] = 0.5
-        return eps0 * np.sum(weights * (phi[row, :] - phi[inside, :]))
 
     # ---- Electric field ----
     def electric_field(self, phi):
@@ -229,10 +213,6 @@ class Geometry:
 
     def plot_potential(self, phi=None, xlim=None, ylim=None, filename=None):
         """Plot a potential array. NaN (unknown) nodes are drawn in grey.
-
-        With no argument it plots self.potential (only fixed nodes are
-        coloured). Later, pass the solved array as phi.
-        xlim, ylim are (min, max) in millimetres, to zoom in.
         """
         import matplotlib.pyplot as plt
 

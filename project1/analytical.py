@@ -1,6 +1,3 @@
-"""
-Analytical (ideal) amplifier output of the field mill.
-"""
 
 import numpy as np
 import matplotlib.pyplot as plt

@@ -1,11 +1,9 @@
 """
  * author Ohidul Islam
  * copyright 2026
-"""
-
-"""
-Shutter sweep: solve the field for every shutter position and record the
-charge on Plate 1 and Plate 2.  Results are saved to sweep_data.npz.
+ 
+ Shutter sweep: solve the field for every shutter position and record the
+charge on Plate 1 and Plate 2
 """
 
 import time
