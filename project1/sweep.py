@@ -16,28 +16,28 @@ plt.rcParams["font.serif"] = ["Times New Roman", "Times", "DejaVu Serif"]
 plt.rcParams["font.size"] = 18
 
 # Grid spacing
-dx = 0.25e-3  # 0.25 mm
-dy = 0.25e-3  # 0.25 mm
+dx = 0.25e-3  
+dy = 0.25e-3  
 
 # Physical and electrical parameters
-E0 = 100.0  # V/m
-w_out = 50e-3  # plate depth W (out of plane)
+E0 = 100.0 
+w_out = 50e-3  
 
 # Domain size
-domain_width = 80e-3  # 80 mm
-domain_height = 80e-3  # 80 mm
+domain_width = 80e-3  
+domain_height = 80e-3  
 
 # Sensing plates
 plate_length = 15e-3
 plate_thickness = 0.5e-3
-plate_height = 10e-3  # bottom of plates above y = 0
+plate_height = 10e-3  
 plate_gap = 2e-3
 
 yp0 = plate_height
 yp1 = yp0 + plate_thickness
 pair_length = 2 * plate_length + plate_gap
 
-# Centre the plate pair in x, on a grid line
+# 
 x_pair_left = round(0.5 * (domain_width - pair_length) / dx) * dx
 
 plate1_x0 = x_pair_left
@@ -45,7 +45,7 @@ plate1_x1 = plate1_x0 + plate_length
 plate2_x0 = plate1_x1 + plate_gap
 plate2_x1 = plate2_x0 + plate_length
 
-# Shutter (same length as a plate)
+# Shutter 
 shutter_length = plate_length
 shutter_thickness = 0.5e-3
 shutter_plate_gap = 2e-3
@@ -63,11 +63,11 @@ x = np.arange(round(domain_width / dx) + 1) * dx
 y = np.arange(round(domain_height / dy) + 1) * dy
 X, Y = np.meshgrid(x, y)
 
-# Top boundary voltage gives a far-field of E0
+# Top boundary 
 top_voltage = E0 * domain_height
 
 # ---- Sweep ----
-s_values = s_start + np.arange(Ns) * dx   # left edge of the shutter
+s_values = s_start + np.arange(Ns) * dx   #
 Q1 = np.zeros(Ns)
 Q2 = np.zeros(Ns)
 
@@ -90,7 +90,7 @@ for k, s in enumerate(s_values):
     print(f"{k + 1:3d}/{Ns}  s = {(s - s_start) * 1e3:5.2f} mm   "
           f"Q1 = {Q1[k]:.4e} C   Q2 = {Q2[k]:.4e} C   ({time.time() - t0:.1f} s)")
 
-# Save so we never have to solve again
+# Save 
 np.savez("sweep_data.npz", s=s_values, Q1=Q1, Q2=Q2)
 
 # ---- Plot ----

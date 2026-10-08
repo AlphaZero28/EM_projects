@@ -173,9 +173,6 @@ class Geometry:
     # ---- Charge ----
     def charge(self, phi, name):
         """Charge per unit depth (C/m) on the conductor `name`.
-
-        Square grid (dx = dy). Q/W = eps0 * sum of (V_conductor - V_neighbour)
-        over every link from a conductor node to a node outside it.
         """
         eps0 = 8.8541878128e-12
         mask = self.masks[name]

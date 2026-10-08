@@ -27,8 +27,6 @@ i2 = -v * np.gradient(Q2, s)
 i = i1 - i2
 V_out = i * Rf
 
-print(f"Output in the middle of the stroke: {V_out[len(s) // 2] * 1e9:.1f} nV")
-print(f"Largest output:                     {np.abs(V_out).max() * 1e9:.1f} nV")
 
 # Plot
 fig, ax = plt.subplots(figsize=(9, 6))

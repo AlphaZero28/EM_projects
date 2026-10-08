@@ -40,7 +40,7 @@ def run_case(domain_width, domain_height, h):
             g.charge(phi, "Plate 2") * w_out)
 
 
-# ---- Study 1: domain size (square box), grid fixed at 0.5 mm ----
+# ---- domain size: grid fixed at 0.5 mm ----
 sizes = [40, 50, 60, 80, 100, 120, 160]
 domain = []
 for size in sizes:
@@ -49,13 +49,13 @@ for size in sizes:
     print(f"domain {size:4d} x {size:<4d} mm   Q1 = {domain[-1][0]:.4e} C   Q2 = {domain[-1][1]:.4e} C   ({time.time() - t0:.1f} s)")
 domain = np.array(domain)
 
-# ---- Study 2: grid spacing, domain fixed at 80 x 80 mm ----
+# ---- grid spacing, domain fixed at 80 x 80 mm ----
 steps = [1.0, 0.5, 0.25, 0.125]
 grid = []
 for h in steps:
     t0 = time.time()
     grid.append(run_case(80e-3, 80e-3, h * 1e-3))
-    print(f"grid {h:5.3f} mm         Q1 = {grid[-1][0]:.4e} C   Q2 = {grid[-1][1]:.4e} C   ({time.time() - t0:.1f} s)")
+
 grid = np.array(grid)
 
 # ---- Change in the calculated charge between one case and the previous one ----
